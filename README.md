@@ -202,6 +202,7 @@ House rules (host toggles in the lobby):
 | `tests/test_layout.py` | Column geometry, preference store, live Tk pane test |
 | `tools/build_cards.py` | One-off renderer: vector sheet → `cards/*.png` + manifest |
 | `docs/PROTOCOL.md` | Wire protocol specification |
+| `LICENSE` | MIT |
 
 The card PNGs in `cards/` are generated; `python3 tools/build_cards.py --sheet
 <rendered sheet.png>` regenerates them (needs Pillow and Chrome for the
@@ -234,3 +235,7 @@ Card faces were rendered once from a vector UNO deck sheet into the PNGs in
 `cards/` (the sheet itself is not in this repo — the finished PNGs are, so
 nothing has to be regenerated in order to play). Everything else — engine,
 networking, browser client, UI — is original code in this folder.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, host it at your own table.
