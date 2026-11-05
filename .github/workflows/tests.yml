@@ -1,0 +1,30 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Tkinter is not part of the runner image and the layout tests open a real
+      # window, so they run under a virtual X server.
+      - name: install Tk
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-tk xvfb
+
+      - name: rules selftest
+        run: python3 uno.py --selftest
+
+      - name: unittest suite
+        run: xvfb-run -a python3 -m unittest discover -s tests -v
