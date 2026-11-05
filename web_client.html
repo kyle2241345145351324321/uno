@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0c1a22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="UNO">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icons/favicon-32.png">
+<title>UNO</title>
+<style>
+:root{
+  --bg:#0c1a22; --panel:#12262f; --panel2:#183440; --ink:#e8f1f5; --muted:#8da4b0;
+  --felt:#0f4033; --felt2:#0b3328; --accent:#ffc93c; --green:#3ddf9a; --red:#f0503c; --blue:#4a9bff;
+  --cw:clamp(60px,17vw,92px);
+  --R:#ee4b57; --Y:#f6ae00; --G:#2fb765; --B:#3b82f6;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei","Segoe UI",system-ui,sans-serif;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+input{font:inherit;color:inherit;-webkit-user-select:text;user-select:text}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.screen{display:none;flex:1;min-height:0}
+.screen.on{display:flex}
+
+/* ---------- generic ---------- */
+.btn{background:var(--panel2);padding:11px 18px;border-radius:12px;font-weight:700;font-size:15px;transition:transform .08s,opacity .15s}
+.btn:active{transform:scale(.96)}
+.btn.primary{background:var(--green);color:#02160c}
+.btn.blue{background:var(--blue);color:#021226}
+.btn.warn{background:var(--red);color:#fff}
+.btn.ghost{background:transparent;color:var(--muted)}
+.btn[disabled]{opacity:.35;pointer-events:none}
+.muted{color:var(--muted)}
+.row{display:flex;align-items:center;gap:10px}
+
+/* ---------- avatars ---------- */
+.av{position:relative;flex:none;border-radius:50%;background:#888 center/cover no-repeat;display:flex;align-items:center;
+  justify-content:center;font-weight:800;color:#101c22;box-shadow:0 0 0 2px var(--ring,transparent)}
+.av.photo{color:transparent}
+
+/* ---------- join ---------- */
+#join{align-items:center;justify-content:center;overflow:auto;padding:20px}
+.joincard{width:min(420px,100%);display:flex;flex-direction:column;gap:14px;text-align:center}
+.logo{font-size:64px;font-weight:900;letter-spacing:2px;color:#ffe14d;
+  text-shadow:3px 4px 0 #b3202a,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff;transform:rotate(-4deg);margin:6px 0 2px}
+.sub{color:var(--muted);font-size:14px}
+.field{display:flex;align-items:center;gap:14px;background:var(--panel);border-radius:16px;padding:12px 14px}
+.field input{flex:1;min-width:0;background:var(--panel2);border:2px solid transparent;border-radius:10px;padding:11px 12px;font-size:17px;outline:none}
+.field input:focus{border-color:var(--green)}
+.avbtn{position:relative;width:58px;height:58px;flex:none;cursor:pointer}
+.avbtn .av{width:58px;height:58px;font-size:26px}
+.avbtn .pen{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#231a03;
+  display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid var(--bg)}
+.roominfo{background:var(--panel);border-radius:14px;padding:12px;font-size:14px;color:var(--muted);min-height:44px}
+.roominfo b{color:var(--ink)}
+.errline{color:#ff8a7a;font-size:14px;min-height:20px}
+.bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bigbtns .btn{padding:15px;font-size:17px}
+.lang{position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px}
+
+/* ---------- lobby ---------- */
+#lobby{flex-direction:column;overflow:auto;padding:14px;gap:12px;align-items:center}
+.lobbycol{width:min(560px,100%);display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border-radius:16px;padding:14px}
+.panel h3{margin:0 0 10px;font-size:15px;color:var(--muted);font-weight:700}
+.seat{display:flex;align-items:center;gap:12px;padding:8px 6px;border-radius:12px}
+.seat.me{background:var(--panel2)}
+.seat .nm{flex:1;font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--muted)}
+.tag.host{background:var(--accent);color:#231a03}
+.tag.off{background:#5a1116;color:#ffb3b3}
+.waitline{text-align:center;color:var(--muted);padding:6px}
+
+/* ---------- game ---------- */
+#game{flex-direction:row;position:relative}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.top{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.top .rnd{font-weight:800;font-size:15px;white-space:nowrap}
+.top .tgt{color:var(--muted);font-size:12px;white-space:nowrap}
+.banner{flex:1;min-width:0;text-align:center;padding:7px 10px;border-radius:10px;background:var(--panel2);color:var(--muted);
+  font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:480px){
+  .top{gap:5px;padding:8px}
+  .iconbtn{width:36px;height:36px;font-size:17px;border-radius:11px}
+  .banner{white-space:normal;font-size:13px;line-height:1.2;padding:5px 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+}
+.banner.you{background:var(--accent);color:#231a03;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{filter:brightness(1.15);transform:scale(1.03)}}
+.iconbtn{position:relative;background:var(--panel2);width:40px;height:40px;border-radius:12px;font-size:18px;flex:none}
+.iconbtn .dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;
+  font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 4px}
+.table{flex:1;min-height:0;margin:0 8px;border-radius:22px;background:radial-gradient(ellipse at 50% 45%,var(--felt) 0,var(--felt2) 100%);
+  box-shadow:inset 0 0 0 3px #0c5a44,inset 0 0 40px rgba(0,0,0,.35);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.opps{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:6px 4px;padding:10px 6px 4px;overflow:auto;flex:0 1 auto;max-height:62%}
+.opp{width:78px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.opp .av{width:44px;height:44px;font-size:19px}
+.opp.turn .av{--ring:var(--c);animation:glow 1.1s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 3px var(--c),0 0 10px 2px var(--c)}50%{box-shadow:0 0 0 3px var(--c),0 0 22px 8px var(--c)}}
+.opp.off{opacity:.45}
+.opp .nm{font-size:12px;font-weight:700;max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opp.turn .nm{color:var(--c)}
+.cnt{position:absolute;top:30px;right:14px;min-width:20px;height:20px;border-radius:10px;background:#16333d;color:var(--ink);
+  border:2px solid var(--felt2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px;z-index:2}
+.cnt.low{background:var(--red);color:#fff}
+.unotag{position:absolute;top:-4px;background:var(--accent);color:#231a03;font-size:10px;font-weight:900;padding:1px 6px;border-radius:99px;z-index:3}
+.fan{display:flex;height:34px;margin-top:2px}
+.fan .mini{width:22px;height:33px;margin-left:-13px;border-radius:4px;background:#14141c;border:2px solid #fff;position:relative}
+.fan .mini:first-child{margin-left:0}
+.fan .mini::after{content:"";position:absolute;inset:7px 3px;border-radius:50%;background:#7a1a22}
+.reveal{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:104px;margin-top:2px}
+.reveal .card{width:24px}
+.unochip{background:#5a1116;border:1px solid var(--red);color:#ffdede;font-size:10px;font-weight:800;border-radius:99px;padding:1px 8px}
+
+.center{flex:1 0 auto;min-height:190px;display:flex;align-items:center;justify-content:center;gap:clamp(10px,4vw,34px);position:relative;padding:4px}
+.piles{display:flex;gap:clamp(10px,3vw,26px);align-items:center}
+.pilebox{display:flex;flex-direction:column;align-items:center;gap:6px}
+.pilebox .lbl{font-size:12px;color:#a8c8bb}
+.drawpile{position:relative;cursor:pointer}
+.drawpile.can{animation:nudge 1.4s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateY(-5px)}}
+.stack{position:relative;width:var(--cw);aspect-ratio:2/3}
+.stack .card{position:absolute;inset:0;width:100%}
+.colorchip{padding:5px 18px;border-radius:99px;font-weight:800;font-size:13px;color:#101c22;transition:background .2s}
+.dir{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:#8fd0b5}
+.dir b{font-size:30px;font-weight:400;display:block;color:#7fe0b8;animation:spin 5s linear infinite}
+.dir.ccw b{animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pending{position:absolute;top:6px;right:10px;background:var(--red);color:#fff;font-weight:900;font-size:15px;padding:6px 12px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.hint{min-height:22px;text-align:center;font-size:13px;color:var(--muted);padding:6px 10px 2px}
+.hint.hot{color:var(--accent);font-weight:700}
+.actions{display:flex;gap:8px;padding:4px 10px 6px;justify-content:center;flex-wrap:wrap}
+.actions .btn{padding:10px 16px;font-size:14px;flex:1;max-width:130px}
+.actions .btn.uno{background:var(--accent);color:#231a03}
+.actions .btn.catch{background:var(--red);color:#fff}
+.key{display:none;margin-left:8px;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:14px;text-align:center;padding:0 4px;border-radius:4px;border:1px solid currentColor;opacity:.6;vertical-align:1px}
+@media (hover:hover) and (pointer:fine){.actions .key{display:inline-block}}
+.handwrap{background:var(--panel);margin-top:2px;border-radius:18px 18px 0 0;padding:6px 0 10px}
+.handhead{display:flex;justify-content:space-between;align-items:center;padding:0 14px;font-size:13px;color:var(--muted)}
+.handhead b{color:var(--ink)}
+.hand{display:flex;overflow-x:auto;overflow-y:hidden;padding:26px 16px 6px;min-height:calc(var(--cw)*1.5 + 36px);-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.hand::-webkit-scrollbar{display:none}
+.hand .hc{flex:none;margin-left:var(--ov,calc(var(--cw)*-.42));position:relative;transition:transform .15s;cursor:pointer}
+.hand .hc:first-child{margin-left:0}
+.hand .hc.play{transform:translateY(-16px)}
+.hand .hc.play::after{content:"";position:absolute;left:50%;bottom:-10px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.hand .hc.jump::after{background:var(--blue);box-shadow:0 0 8px var(--blue);content:"";position:absolute;left:50%;bottom:-10px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%}
+.hand .hc.dim{filter:brightness(.55)}
+.hand .hc.sel{transform:translateY(-34px);z-index:5}
+.hand .hc.drawn{transform:translateY(-22px)}
+.hand .hc{touch-action:pan-x}
+.hand .hc.enter{animation:enter .45s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes enter{from{opacity:0;transform:translateY(70px) scale(.75)}}
+@media (hover:hover){.hand .hc:hover{transform:translateY(-10px)}.hand .hc.play:hover{transform:translateY(-26px)}}
+.stack .card.land{animation:land .42s cubic-bezier(.2,.9,.2,1) var(--d,0s) backwards}
+@keyframes land{from{opacity:0;transform:scale(1.3)}}
+.dragghost{position:fixed;z-index:66;pointer-events:none;border-radius:9%;box-shadow:0 18px 34px rgba(0,0,0,.55);transform:rotate(-4deg) scale(1.06)}
+.fly{position:fixed;left:0;top:0;z-index:64;pointer-events:none;margin:0;will-change:transform;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
+.table.drop{box-shadow:inset 0 0 0 3px var(--green),inset 0 0 50px rgba(61,223,154,.28)}
+.spectate{padding:18px;text-align:center;color:var(--muted)}
+
+/* ---------- cards ---------- */
+.card{display:block;position:relative;width:var(--cw);aspect-ratio:2/3;border-radius:9%;overflow:hidden;flex:none}
+.card img{display:block;width:100%;height:100%;pointer-events:none;-webkit-user-drag:none}
+.card.css{background:#fff;padding:4.5%}
+.card.css .in{position:absolute;inset:4.5%;border-radius:7%;background:var(--c);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.card.css .in::before{content:"";position:absolute;width:78%;height:56%;background:#fff;border-radius:50%;transform:rotate(-24deg)}
+.card.css .v{position:relative;font-weight:900;color:var(--c);font-size:calc(var(--cw)*.42);line-height:1}
+.card.css .k{position:absolute;top:5%;left:9%;color:#fff;font-weight:900;font-size:calc(var(--cw)*.2)}
+.card.css.wild .in{background:conic-gradient(var(--R) 0 25%,var(--B) 0 50%,var(--G) 0 75%,var(--Y) 0)}
+.card.css.wild .in::before{background:#14141c;width:60%;height:60%;transform:none}
+.card.css.wild .v{color:#fff;font-size:calc(var(--cw)*.3)}
+.card.css.back{background:#fff}
+.card.css.back .in{background:#14141c}
+.card.css.back .in::before{background:#a3141c;transform:rotate(-24deg)}
+.card.css.back .v{color:#ffd23c;font-size:calc(var(--cw)*.26);transform:rotate(-24deg);-webkit-text-stroke:1px #a3141c}
+
+/* ---------- side panel (log + chat) ---------- */
+.side{position:fixed;left:0;right:0;bottom:0;height:64%;z-index:30;background:var(--panel);border-radius:20px 20px 0 0;
+  display:flex;flex-direction:column;transform:translateY(105%);transition:transform .25s ease;box-shadow:0 -10px 40px rgba(0,0,0,.5);
+  padding-bottom:env(safe-area-inset-bottom)}
+.side.open{transform:none}
+.sidehead{display:flex;align-items:center;gap:6px;padding:10px 12px 6px}
+.tab{padding:7px 14px;border-radius:99px;background:transparent;color:var(--muted);font-weight:800;font-size:14px}
+.tab.on{background:var(--panel2);color:var(--ink)}
+.sidehead .sp{flex:1}
+.pane{flex:1;min-height:0;overflow:auto;padding:4px 14px 10px;display:none}
+.pane.on{display:block}
+.logline{font-size:13px;color:#b9cdd6;padding:3px 0}
+.msg{display:flex;gap:9px;padding:7px 0;align-items:flex-start}
+.msg .av{width:30px;height:30px;font-size:13px}
+.msg .who{font-weight:800;font-size:13px}
+.msg .who.me{color:var(--green)}
+.msg .tx{font-size:14px;word-break:break-word;-webkit-user-select:text;user-select:text}
+.chatbar{display:none;gap:8px;padding:8px 12px}
+.chatbar.on{display:flex}
+.chatbar input{flex:1;min-width:0;background:var(--panel2);border:2px solid transparent;border-radius:12px;padding:10px 12px;font-size:15px;outline:none}
+.chatbar input:focus{border-color:var(--green)}
+@media (min-width:980px){
+  .side{position:static;transform:none;height:auto;width:360px;border-radius:0;box-shadow:none;border-left:1px solid #0c1a22;flex:none;transition:none;padding-bottom:0}
+  #btnChat,#closeSide{display:none}
+  .table{margin:0 10px}
+  :root{--cw:clamp(70px,7vw,104px)}
+  .opp{width:92px}.opp .av{width:52px;height:52px}.cnt{top:36px;right:20px}
+}
+
+/* ---------- overlays ---------- */
+#overlay{position:fixed;inset:0;z-index:50;background:rgba(5,14,19,.72);display:none;align-items:center;justify-content:center;padding:18px;
+  backdrop-filter:blur(3px)}
+#overlay.on{display:flex}
+.dialog{background:var(--panel);border-radius:20px;padding:20px;width:min(380px,100%);display:flex;flex-direction:column;gap:14px;
+  max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.9);opacity:0}}
+.dialog h2{margin:0;text-align:center;font-size:21px}
+.dialog h2.gold{color:var(--accent);font-size:26px}
+.dialog .sub2{text-align:center;color:var(--ink);font-size:16px}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.colors button{height:72px;border-radius:16px;font-weight:900;font-size:17px;color:#101c22}
+.picks{display:flex;flex-direction:column;gap:8px}
+.pick{display:flex;align-items:center;gap:12px;background:var(--panel2);padding:10px 14px;border-radius:14px;font-weight:700;font-size:16px;text-align:left}
+.pick .av{width:36px;height:36px;font-size:16px}
+.pick .c{margin-left:auto;color:var(--muted);font-size:13px}
+.scores{width:100%;border-collapse:collapse;font-size:14px}
+.scores th{color:var(--muted);font-weight:700;text-align:right;padding:4px 6px;font-size:12px}
+.scores th:first-child,.scores td:first-child{text-align:left}
+.scores td{padding:7px 6px;text-align:right;border-top:1px solid #1d3b48}
+.scores .pl{display:flex;align-items:center;gap:8px;font-weight:700}
+.scores .pl .av{width:26px;height:26px;font-size:12px}
+.pos{color:var(--green)}.neg{color:#ff8a7a}
+.avpreview{display:flex;justify-content:center}
+.avpreview .av{width:120px;height:120px;font-size:54px}
+
+.pwa-link{background:none;color:var(--muted);font-size:13px;font-weight:700;padding:8px 6px;text-align:center;width:100%}
+.pwa-link:active{color:var(--ink)}
+.pwa-steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:9px;font-size:15px;line-height:1.45}
+.pwa-steps b{color:var(--accent)}
+.pwa-note{font-size:12.5px;color:var(--muted);line-height:1.5}
+.pwa-tabs{display:flex;gap:6px}
+.pwa-tabs .btn{flex:1;padding:9px 6px;font-size:14px}
+.pwa-tabs .btn.on{background:var(--green);color:#06281b}
+.tbar{display:flex;align-items:center;gap:8px;padding:0 14px 6px}
+.tbar .trk{flex:1;height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.tbar i{display:block;height:100%;width:100%;border-radius:3px;background:var(--green)}
+.tbar b{min-width:26px;text-align:right;font-size:15px;color:var(--green);font-variant-numeric:tabular-nums}
+.reactpop{position:fixed;z-index:70;display:none;flex-direction:column;gap:4px;padding:8px;background:var(--panel2);border:1px solid #2f5a69;border-radius:16px;
+  box-shadow:0 10px 28px rgba(0,0,0,.45);max-width:calc(100vw - 16px);overflow-y:auto;overscroll-behavior:contain}
+.reactpop.on{display:flex;animation:pop .14s ease-out}
+.reactpop .rr{display:flex;justify-content:center;gap:4px}
+.reactpop button{flex:none;font-size:clamp(20px,5.6vw,26px);line-height:1;width:clamp(34px,calc((100vw - 56px)/8),46px);height:44px;border-radius:12px;background:transparent;touch-action:manipulation}
+.reactpop button:active{background:rgba(255,255,255,.14)}
+.reactpop .lead{text-align:center;font-size:11px;font-weight:800;color:var(--muted);padding:2px 0 0}
+.reactpop .lead.me{color:var(--accent)}
+.reactpop button.locked{opacity:.4;filter:grayscale(1)}
+.reactpop button.nope{animation:nope .3s}
+@keyframes nope{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.floatreact{position:fixed;z-index:65;pointer-events:none;text-align:center;font-size:38px;line-height:1;will-change:transform,opacity;transform:translate(-50%,-50%)}
+.floatreact.big{font-size:48px}
+#toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:80;background:#3a1218;color:#ffe0e0;
+  border:1px solid var(--red);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;max-width:90vw;text-align:center;
+  transition:transform .25s ease,opacity .2s ease;pointer-events:none;opacity:0}
+#toast.on{transform:translate(-50%,0);opacity:1}
+#toast.ok{background:#0f3a2a;border-color:var(--green);color:#d6ffee}
+#fx{position:fixed;left:0;right:0;top:36%;z-index:60;text-align:center;pointer-events:none;font-weight:900;font-size:clamp(54px,17vw,120px);
+  line-height:1;font-family:"Arial Black","Impact",system-ui,sans-serif;-webkit-text-stroke:3px #fff;paint-order:stroke fill;
+  text-shadow:4px 6px 0 rgba(0,0,0,.45);opacity:0}
+#fx small{display:block;margin-top:10px;font-size:15px;-webkit-text-stroke:0;color:var(--ink);background:rgba(6,36,27,.85);
+  display:inline-block;padding:4px 14px;border-radius:99px;text-shadow:none;font-family:inherit;font-weight:800}
+#fx.go{animation:fxgo 1.45s ease-out forwards}
+@keyframes fxgo{0%{opacity:0;transform:scale(.4)}14%{opacity:1;transform:scale(1.18)}28%{transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(1.04)}}
+#conf{position:fixed;inset:0;z-index:70;pointer-events:none}
+.modalfull{position:fixed;inset:0;z-index:90;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px;text-align:center;flex-direction:column;gap:16px}
+.modalfull.on{display:flex}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- JOIN -->
+  <section id="join" class="screen on">
+    <button class="btn lang" id="langJoin">中文</button>
+    <div class="joincard">
+      <div class="logo">UNO</div>
+      <div class="sub" id="joinSub"></div>
+      <div class="field">
+        <div class="avbtn" id="joinAv"></div>
+        <input id="nameInput" maxlength="16" autocomplete="off" autocapitalize="words" spellcheck="false">
+      </div>
+      <div class="field" id="pwField" style="display:none"><span style="font-size:22px">🔒</span><input id="pwInput" type="password" maxlength="24" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <div class="roominfo" id="roomInfo"></div>
+      <div class="errline" id="joinErr"></div>
+      <div class="bigbtns">
+        <button class="btn primary" id="btnJoin"></button>
+        <button class="btn blue" id="btnWatch"></button>
+      </div>
+      <button class="pwa-link" id="btnPwa" style="display:none"></button>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="screen">
+    <div class="lobbycol">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+        <div style="flex:1 1 180px;min-width:0"><div style="font-weight:900;font-size:19px" id="lobTitle"></div><div class="muted" style="font-size:13px" id="lobSub"></div></div>
+        <div class="row" style="flex:none">
+          <button class="btn" id="lobLang" style="white-space:nowrap;padding:9px 14px">中文</button>
+          <button class="btn warn" id="lobLeave" style="white-space:nowrap;padding:9px 14px"></button>
+        </div>
+      </div>
+      <div class="panel"><h3 id="lobSeatsH"></h3><div id="lobSeats"></div><div class="waitline" id="lobWait"></div></div>
+      <div class="panel"><h3 id="lobRulesH"></h3><div id="lobRules" style="font-size:14px;line-height:1.7"></div></div>
+      <div class="panel">
+        <h3 id="lobChatH"></h3>
+        <div id="lobChatList" style="max-height:220px;overflow:auto"></div>
+        <div class="chatbar on" style="padding:8px 0 0"><input id="lobChatInput" maxlength="300" autocomplete="off"><button class="btn primary" id="lobChatSend"></button></div>
+      </div>
+      <div class="row" style="gap:10px"><button class="btn" id="lobAvatar" style="flex:1"></button><button class="btn" id="lobRename" style="flex:1"></button></div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen">
+    <div class="main">
+      <div class="top">
+        <div><div class="rnd" id="rnd"></div><div class="tgt" id="tgt"></div></div>
+        <div class="banner" id="banner"></div>
+        <button class="iconbtn" id="btnReact">😊</button>
+        <button class="iconbtn" id="btnChat">💬<span class="dot" id="chatDot"></span></button>
+        <button class="iconbtn" id="btnMenu">⋯</button>
+      </div>
+      <div class="tbar" id="tbar" style="display:none"><div class="trk"><i id="tfill"></i></div><b id="tnum"></b></div>
+      <div class="table" id="tableEl">
+        <div class="opps" id="opps"></div>
+        <div class="center" id="center"></div>
+      </div>
+      <div class="hint" id="hint"></div>
+      <div class="actions" id="actions"></div>
+      <div class="handwrap">
+        <div class="handhead"><div id="handTitle"></div><button class="btn primary" id="btnCombo" style="display:none;padding:2px 12px;font-size:13px;margin-left:auto;margin-right:8px"></button><button class="btn ghost" id="btnSort" style="padding:2px 10px;font-size:13px"></button></div>
+        <div class="hand" id="hand"></div>
+      </div>
+    </div>
+    <aside class="side" id="side">
+      <div class="sidehead">
+        <button class="tab on" id="tabChat"></button>
+        <button class="tab" id="tabLog"></button>
+        <span class="sp"></span>
+        <button class="iconbtn" id="closeSide">✕</button>
+      </div>
+      <div class="pane on" id="paneChat"></div>
+      <div class="pane" id="paneLog"></div>
+      <div class="chatbar on" id="chatbar"><input id="chatInput" maxlength="300" autocomplete="off"><button class="btn primary" id="chatSend"></button></div>
+    </aside>
+  </section>
+</div>
+
+<div id="overlay"></div>
+<div class="reactpop" id="reactPop"></div>
+<div id="fx"></div>
+<canvas id="conf"></canvas>
+<div id="toast"></div>
+<div class="modalfull" id="closedScreen"><div style="font-size:54px">👋</div><div id="closedText" style="font-size:18px;font-weight:700"></div><button class="btn primary" id="closedBtn"></button></div>
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+
+<script>
+"use strict";
+/* =====================================================================
+   UNO web client - talks to the host through /api/* (see webserver.py)
+   ===================================================================== */
+const COLOR_HEX = {R:"#ee4b57", Y:"#f6ae00", G:"#2fb765", B:"#3b82f6"};
+const SEAT_COLORS = ["#ff8a3d","#a78bfa","#f472b6","#38bdf8","#fbbf24","#34d399","#fb7185","#22d3ee","#c084fc","#facc15"];
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("uno." + k); return v === null ? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("uno." + k, v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem("uno." + k); }catch(e){} },
+};
+
+/* ---------- text ---------- */
+const WEB = {
+  zh:{ sub:"在手機或瀏覽器加入同一桌 UNO", join:"加入遊戲", watch:"旁觀", pw:"房間密碼", waiting_host:"等房主同意…", locked:"🔒 有密碼", approval:"✋ 需要房主同意", rename:"改名字", tap_play:"把牌往上拖到桌面，或點兩下出牌", tap_play_mouse:"把牌拖到桌面，或直接點牌",
+       sort:"整理手牌", my_avatar:"我的頭像", choose:"選擇照片…", remove:"移除照片", done:"完成", av_hint:"照片會裁成圓形，同桌的人都看得到。",
+       cant_read:"這張圖片讀不了，換一張試試。", closed:"房間已關閉", again:"回到首頁", room_busy:"遊戲進行中，只能旁觀",
+       room_wait:"等待中", room_players:"{n}/{c} 位玩家", room_none:"找不到房間 — 請確認主機還開著", rejoin_fail:"無法回到原本的座位",
+       full:"房間或網頁連線已滿", unreachable:"連不上主機", menu_lang:"English", menu_avatar:"我的頭像", menu_leave:"離開", draw_pile:"抽牌堆",
+       discard:"棄牌", you_spectate:"你正在旁觀", showdown:"亮牌", pending_label:"+{n}", copied:"已複製", tap_draw:"點牌堆也能抽牌",
+       lobby_wait_spec:"旁觀中，等房主開始…", host:"房主", you:"你", offline:"離線", conn_lost:"連線中斷，重新連線中…", reconnected:"已重新連線", react_spectator:"旁觀者不能送表情", react_leader_only:"🔒 領先的玩家專用", react_leader_you:"你正在領先！", combo_btn:"連出 ×{n}",
+    pwa_btn:"📲 加到手機主畫面", pwa_title:"加到主畫面", pwa_tab_ios:"iPhone / iPad", pwa_tab_android:"Android", pwa_tab_other:"其他",
+    pwa_ios1:"用 <b>Safari</b> 打開這個頁面", pwa_ios2:"點下方（iPad 在上方）的<b>分享</b>按鈕 ⬆︎", pwa_ios3:"往下找到<b>加入主畫面</b>，按<b>加入</b>",
+    pwa_and1:"用 <b>Chrome</b> 打開這個頁面", pwa_and2:"點右上角的 <b>⋮</b> 選單", pwa_and3:"選<b>加到主畫面</b>（或<b>安裝應用程式</b>），按<b>新增</b>",
+    pwa_oth1:"在瀏覽器選單裡找<b>加到主畫面</b>或<b>安裝</b>", pwa_oth2:"電腦上不需要，直接把這個網址加入書籤就好",
+    pwa_note:"加好之後從主畫面打開，就是全螢幕、沒有網址列。圖示記住的是現在這個網址；如果主機的 IP 換了（例如換了 Wi-Fi 或重開路由器），要刪掉圖示、用新網址重新加。", pwa_done:"你已經是從主畫面打開的了 👍" },
+  en:{ sub:"Join the same UNO table from your phone or browser", join:"Join", watch:"Watch", pw:"Room password", waiting_host:"Waiting for the host to let you in…", locked:"🔒 password", approval:"✋ host approval", rename:"Change name", tap_play:"Drag a card up to the table, or tap twice", tap_play_mouse:"Drag a card to the table, or click it",
+       sort:"Sort hand", my_avatar:"My avatar", choose:"Choose photo…", remove:"Remove photo", done:"Done", av_hint:"Your photo is cropped to a circle and shown to everyone.",
+       cant_read:"That picture can't be read - try another.", closed:"The room was closed", again:"Back to start", room_busy:"Game in progress - watch only",
+       room_wait:"Waiting", room_players:"{n}/{c} players", room_none:"No room found - is the host still open?", rejoin_fail:"Could not return to your seat",
+       full:"The room or web capacity is full", unreachable:"Cannot reach the host", menu_lang:"中文", menu_avatar:"My avatar", menu_leave:"Leave", draw_pile:"Draw pile",
+       discard:"Discard", you_spectate:"You are spectating", showdown:"Showdown", pending_label:"+{n}", copied:"Copied", tap_draw:"You can also tap the draw pile",
+       lobby_wait_spec:"Spectating - waiting for the host…", host:"Host", you:"You", offline:"offline", conn_lost:"Connection lost - reconnecting…", reconnected:"Reconnected", react_spectator:"Spectators can't send reactions", react_leader_only:"🔒 Leader only", react_leader_you:"You are leading!", combo_btn:"Play ×{n}",
+    pwa_btn:"📲 Add to home screen", pwa_title:"Add to home screen", pwa_tab_ios:"iPhone / iPad", pwa_tab_android:"Android", pwa_tab_other:"Other",
+    pwa_ios1:"Open this page in <b>Safari</b>", pwa_ios2:"Tap the <b>Share</b> button ⬆︎ (bottom on iPhone, top on iPad)", pwa_ios3:"Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>",
+    pwa_and1:"Open this page in <b>Chrome</b>", pwa_and2:"Tap the <b>⋮</b> menu at the top right", pwa_and3:"Choose <b>Add to Home screen</b> (or <b>Install app</b>), then <b>Add</b>",
+    pwa_oth1:"Look for <b>Add to Home Screen</b> or <b>Install</b> in the browser menu", pwa_oth2:"Not needed on a computer — just bookmark the address",
+    pwa_note:"Opened from the home screen it runs full-screen with no address bar. The icon remembers the current address; if the host's IP changes (new Wi-Fi, router restart), delete the icon and add it again from the new address.", pwa_done:"You are already running from the home screen 👍" },
+};
+let I18N = {STR:{}, ERRORS:{}, VALUE_NAMES:{}, COLOR_NAMES:{}};
+let lang = store.get("lang") || ((navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en");
+const li = () => lang === "zh" ? 0 : 1;
+function fmt(s, vars){ return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)) : s; }
+function t(key, vars){ const p = I18N.STR[key]; return fmt(p ? p[li()] : key, vars); }
+function w(key, vars){ return fmt((WEB[lang] || WEB.en)[key] || key, vars); }
+function errText(code){ const p = I18N.ERRORS[code]; return p ? p[li()] : code; }
+function colorText(c){ const p = I18N.COLOR_NAMES[c]; return p ? p[li()] : (c || ""); }
+function cardText(card){
+  if(!card) return "—";
+  if(card === "wild" || card === "wild4") return I18N.VALUE_NAMES[card][li()];
+  const c = card[0], v = card.slice(1);
+  return colorText(c) + (I18N.VALUE_NAMES[v] ? I18N.VALUE_NAMES[v][li()] : v);
+}
+const isWild = (c) => c === "wild" || c === "wild4";
+
+/* ---------- state ---------- */
+const S = {
+  sid:null, you:null, room:null, snap:null, snapAt:0, chat:[], log:[], name:"", token:store.get("token"), spectate:false,
+  av:{}, avReq:{}, avPushed:{}, sel:null, sort:store.get("sort") === "1", sigs:{}, unread:0, joined:false, es:null,
+  seenSeq:0, reconnecting:false, picker:null, prevHand:[], prevTop:null, prevTopN:0, flyUntil:0, flyHandUntil:0, dragHint:"", dragEnd:0, lastPlay:null,
+};
+const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+
+/* ---------- tiny dom helpers ---------- */
+function h(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  if(attrs) for(const k in attrs){
+    const v = attrs[k];
+    if(k === "class") e.className = v; else if(k === "style") e.style.cssText = v;
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2), v); else if(v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  for(const kid of kids.flat()) if(kid != null) e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return e;
+}
+function setSig(key, sig, build){ if(S.sigs[key] === sig) return false; S.sigs[key] = sig; build(); return true; }
+function show(screen){
+  for(const id of ["join","lobby","game"]) $(id).classList.toggle("on", id === screen);
+  S.screen = screen;
+}
+let toastTimer = null;
+function toast(msg, ok){
+  const el = $("toast"); el.textContent = msg; el.classList.toggle("ok", !!ok); el.classList.add("on");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("on"), 2300);
+}
+
+/* ---------- avatars ---------- */
+function crc32(str){
+  if(!crc32.t){ crc32.t = []; for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; crc32.t[n] = c >>> 0; } }
+  let c = 0xFFFFFFFF; for(let i = 0; i < str.length; i++) c = crc32.t[(c ^ str.charCodeAt(i)) & 255] ^ (c >>> 8);
+  return ((c ^ 0xFFFFFFFF) >>> 0).toString(16).padStart(8, "0");
+}
+let myAvB64 = store.get("avatar", "");
+let myAvVer = myAvB64 ? crc32(myAvB64) : "";
+function avUrl(pid){
+  if(pid === S.you && myAvB64) return "data:image/png;base64," + myAvB64;
+  const a = S.av[pid]; return a ? a.url : null;
+}
+function seatColor(pid){ return SEAT_COLORS[(typeof pid === "number" ? pid : 0) % SEAT_COLORS.length]; }
+function avatarEl(pid, name, size, url){
+  const u = url !== undefined ? url : (typeof pid === "number" ? avUrl(pid) : null);
+  const e = h("div", {class:"av" + (u ? " photo" : "")});
+  if(size){ e.style.width = e.style.height = size + "px"; e.style.fontSize = Math.round(size * .44) + "px"; }
+  e.style.background = u ? `center/cover no-repeat url(${u})` : seatColor(pid);
+  e.style.setProperty("--ring", seatColor(pid)); e.style.setProperty("--c", seatColor(pid));
+  if(!u) e.textContent = (String(name || "?").trim().slice(0, 1) || "?").toUpperCase();
+  return e;
+}
+function syncAvatars(){
+  if(!S.room || !S.joined) return;
+  const want = [];
+  for(const seat of S.room.seats || []){
+    const pid = seat.pid, ver = seat.av || "";
+    if(pid === S.you){
+      const key = pid + ":" + myAvVer;
+      if(ver !== myAvVer && !S.avPushed[key]){ S.avPushed[key] = true; send({t:"avatar", data:myAvB64}); }
+      continue;
+    }
+    if(!ver){ if(S.av[pid]){ delete S.av[pid]; invalidate(); } delete S.avReq[pid]; }
+    else if(!S.av[pid] || S.av[pid].v !== ver){ if(S.avReq[pid] !== ver){ S.avReq[pid] = ver; want.push(pid); } }
+  }
+  if(want.length) send({t:"avatar_get", pids:want});
+}
+function pickPhoto(file, done){
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    try{
+      let out = "";
+      for(const size of [64, 56, 48, 40]){
+        const c = document.createElement("canvas"); c.width = c.height = size;
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+        const ctx = c.getContext("2d"); ctx.imageSmoothingQuality = "high"; ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        out = c.toDataURL("image/png").split(",")[1];
+        if(out.length <= 15000) break;
+      }
+      URL.revokeObjectURL(url);
+      if(!out || out.length > 15000) throw new Error("big");
+      setMyAvatar(out); done && done(true);
+    }catch(e){ done && done(false); }
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); done && done(false); };
+  img.src = url;
+}
+function setMyAvatar(b64){
+  myAvB64 = b64 || ""; myAvVer = myAvB64 ? crc32(myAvB64) : "";
+  if(myAvB64) store.set("avatar", myAvB64); else store.del("avatar");
+  delete S.avPushed[S.you + ":" + myAvVer];
+  syncAvatars(); invalidate(); renderAll(); refreshJoinAv();
+}
+function openAvatarDialog(){
+  const pv = h("div", {class:"avpreview"});
+  const draw = () => { pv.replaceChildren(avatarEl(S.you != null ? S.you : 0, $("nameInput").value || S.name, 120, myAvB64 ? "data:image/png;base64," + myAvB64 : null)); rm.disabled = !myAvB64; };
+  const rm = h("button", {class:"btn", onclick:() => { setMyAvatar(""); draw(); }}, w("remove"));
+  const dlg = h("div", {class:"dialog"}, h("h2", null, w("my_avatar")), pv, h("div", {class:"sub2 muted", style:"font-size:13px"}, w("av_hint")),
+    h("div", {class:"row", style:"justify-content:center;flex-wrap:wrap"},
+      h("button", {class:"btn primary", onclick:() => { $("fileInput").onchange = (ev) => { const f = ev.target.files[0]; ev.target.value = "";
+          if(f) pickPhoto(f, (ok) => { if(!ok) toast(w("cant_read")); draw(); }); }; $("fileInput").click(); }}, w("choose")), rm),
+    h("button", {class:"btn", onclick:closeOverlay}, w("done")));
+  draw(); openOverlay(dlg);
+}
+function refreshJoinAv(){
+  const box = $("joinAv"); box.replaceChildren(avatarEl(0, $("nameInput").value || t("name_default"), 58, myAvB64 ? "data:image/png;base64," + myAvB64 : null), h("span", {class:"pen"}, "✎"));
+}
+
+/* ---------- network ---------- */
+async function api(path, body){
+  const res = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body || {})});
+  let data = {}; try{ data = await res.json(); }catch(e){}
+  return {ok:res.ok, status:res.status, data};
+}
+function send(msg){
+  if(!S.sid) return;
+  fetch("/api/send?sid=" + encodeURIComponent(S.sid), {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(msg)})
+    .then(r => { if(r.status === 404 || r.status === 410) rejoin(); }).catch(() => {});
+}
+async function joinRoom(spectate, silent){
+  const name = ($("nameInput").value || "").trim().slice(0, 16) || t("name_default");
+  store.set("name", name);
+  $("joinErr").textContent = "";
+  const waiting = !silent && S.info && S.info.approval && !S.token;
+  if(waiting){ $("joinErr").style.color = "var(--muted)"; $("joinErr").textContent = w("waiting_host"); $("btnJoin").disabled = $("btnWatch").disabled = true; }
+  let r;
+  try{ r = await api("/api/join", {name, spectate, token:S.token, password:$("pwInput").value}); }
+  catch(e){ $("btnJoin").disabled = $("btnWatch").disabled = false; if(!silent){ $("joinErr").style.color = ""; $("joinErr").textContent = w("unreachable"); } return false; }
+  $("btnJoin").disabled = $("btnWatch").disabled = false; $("joinErr").style.color = "";
+  if(!r.ok){
+    if(r.data.error === "bad_password"){ $("pwField").style.display = "flex"; $("pwInput").focus(); }
+    if(!silent) $("joinErr").textContent = r.status === 503 ? w("full") : (errText(r.data.error) === r.data.error && r.data.error === "unreachable" ? w("unreachable") : errText(r.data.error));
+    else $("joinErr").textContent = "";
+    return false;
+  }
+  $("pwInput").value = "";
+  S.sid = r.data.sid; S.token = r.data.token; store.set("token", S.token); S.name = r.data.name; S.spectate = !!spectate;
+  store.set("active", "1"); store.set("spectate", spectate ? "1" : "0");
+  if(r.data.name !== name) toast(t("net_renamed", {name:r.data.name}), true);
+  S.joined = true; S.avPushed = {}; S.avReq = {}; S.av = {}; S.sigs = {};
+  applyWelcome(r.data.welcome);
+  openStream();
+  return true;
+}
+function openStream(){
+  if(S.es) try{ S.es.close(); }catch(e){}
+  const es = new EventSource("/api/events?sid=" + encodeURIComponent(S.sid));
+  S.es = es;
+  es.onmessage = (ev) => { if(S.reconnecting){ S.reconnecting = false; toast(w("reconnected"), true); } let m; try{ m = JSON.parse(ev.data); }catch(e){ return; } onMsg(m); };
+  es.onerror = () => {
+    if(es !== S.es) return;
+    if(es.readyState === 2){ rejoin(); } else if(!S.reconnecting){ S.reconnecting = true; toast(w("conn_lost")); }
+  };
+}
+let rejoining = false;
+async function rejoin(){
+  if(rejoining || !S.joined) return; rejoining = true;
+  try{
+    if(S.es) try{ S.es.close(); }catch(e){}
+    S.es = null; S.sid = null;
+    const ok = await joinRoom(S.spectate, true);
+    if(!ok){ leaveLocal(); toast(w("rejoin_fail")); }
+  } finally { rejoining = false; S.reconnecting = false; }
+}
+function leaveLocal(){
+  S.joined = false; S.sid = null; S.you = null; S.snap = null; S.room = null; S.chat = []; S.log = []; S.sigs = {}; S.sel = null; S.unread = 0;
+  if(S.es) try{ S.es.close(); }catch(e){} S.es = null;
+  store.del("active"); closeOverlay(); $("side").classList.remove("open"); show("join"); loadInfo();
+}
+async function leave(){
+  const sid = S.sid;
+  if(sid) fetch("/api/leave?sid=" + encodeURIComponent(sid), {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"}).catch(() => {});
+  S.token = null; store.del("token"); leaveLocal();
+}
+
+function applyWelcome(msg){
+  S.you = msg.you == null ? null : msg.you; S.room = msg.room || S.room; S.chat = (msg.chat || []).slice(-80);
+  if(msg.snap){ S.snap = msg.snap; S.snapAt = performance.now(); }
+  S.log = []; S.seenSeq = 0; invalidate(); syncAvatars(); routeScreen(); renderAll();
+}
+function routeScreen(){
+  if(!S.joined) return show("join");
+  const st = S.room ? S.room.state : "lobby";
+  const want = st === "lobby" ? "lobby" : "game";
+  if(S.screen !== want){ show(want); if(want === "game") renderChatInto("paneChat"); }
+}
+function invalidate(){ S.sigs = {}; }
+function onMsg(m){
+  switch(m.t){
+    case "welcome": applyWelcome(m); break;
+    case "room": S.room = m.room || S.room; syncAvatars(); routeScreen(); renderAll(); break;
+    case "state":
+      if(m.snap){ S.snap = m.snap; S.snapAt = performance.now(); }
+      if(m.room){ S.room = m.room; syncAvatars(); }
+      routeScreen(); renderAll(); break;
+    case "events": onEvents(m.items || []); break;
+    case "react": floatReact(m); break;
+    case "chat": S.chat.push(m); if(S.chat.length > 100) S.chat.shift(); onChat(m); break;
+    case "avatar":
+      if(typeof m.pid === "number" && typeof m.data === "string"){ S.av[m.pid] = {v:String(m.v || ""), url:"data:image/png;base64," + m.data}; invalidate(); renderAll(); renderChats(); }
+      break;
+    case "error": if(m.code === "kicked"){ closedScreen(t("game_kicked")); } else toast(errText(m.code)); break;
+    case "kicked": closedScreen(t("game_kicked")); break;
+    case "closed": closedScreen(w("closed")); break;
+  }
+}
+function closedScreen(text){
+  S.joined = false; if(S.es) try{ S.es.close(); }catch(e){} S.es = null; S.sid = null; store.del("active");
+  $("closedText").textContent = text; $("closedBtn").textContent = w("again"); $("closedScreen").classList.add("on");
+}
+
+/* ---------- events -> log, effects ---------- */
+function pname(pid){ const seat = ((S.room && S.room.seats) || []).find(s => s.pid === pid); if(seat) return seat.name; const p = S.snap && S.snap.players.find(x => x.pid === pid); return p ? p.name : "?"; }
+function eventLine(ev){
+  const name = ev.pid != null ? pname(ev.pid) : "?";
+  switch(ev.t){
+    case "round_start": return t("log_round_start", {n:ev.round_no || (S.snap && S.snap.round_no) || 1, name:pname(ev.first)});
+    case "play": return isWild(ev.card) ? t("log_play_pick", {name, card:cardText(ev.card), color:colorText(ev.color)}) : t("log_play", {name, card:cardText(ev.card)});
+    case "draw": { const n = ev.n || 1; return (n > 1 || ev.reason === "start") ? t("log_draw", {name, n}) : t("log_draw_one", {name}); }
+    case "skip": return t("log_skip", {name});
+    case "reverse": return t("log_reverse");
+    case "pending": return t("log_pending", {n:ev.n || 0});
+    case "uno_call": return t("log_uno", {name});
+    case "uno_safe": return t("log_uno_safe", {name});
+    case "catch": return t("log_catch", {name:pname(ev.by), target:pname(ev.pid), n:ev.n || 2});
+    case "swap": return t("log_swap", {name, target:pname(ev.target)});
+    case "rotate": return t("log_rotate");
+    case "pass": return t("log_pass", {name});
+    case "turn_timeout": return t("log_timeout", {name});
+    case "round_end": return t("log_round_end", {name:pname(ev.winner), n:ev.points || 0});
+    case "match_end": return t("log_match_end", {name:pname(ev.winner)});
+  }
+  return null;
+}
+function onEvents(items){
+  for(const ev of items){
+    if(ev.seq && ev.seq <= S.seenSeq) continue;
+    if(ev.seq) S.seenSeq = ev.seq;
+    S.log.push(ev); if(S.log.length > 200) S.log.shift();
+    if(ev.t === "play"){ animatePlay(ev); flashCard(ev); }
+    else if(ev.t === "draw") animateDraw(ev);
+    else if(ev.t === "uno_call") flashFx("UNO!", "#ffc93c", pname(ev.pid));
+    else if(ev.t === "round_end") confetti(false);
+    else if(ev.t === "match_end") confetti(true);
+    else if(ev.t === "turn" && ev.pid === S.you && navigator.vibrate) try{ navigator.vibrate(60); }catch(e){}
+  }
+  renderLog();
+}
+const FX_WORDS = {skip:["SKIP","跳過"], reverse:["REVERSE","迴轉"], draw2:["+2","+2"], wild4:["+4","+4"], wild:["WILD","變色"]};
+function flashCard(ev){
+  const card = ev.card || ""; let kind = card === "wild4" ? "wild4" : card === "wild" ? "wild" : card.slice(1);
+  if(!FX_WORDS[kind]) return;
+  const color = isWild(card) ? (COLOR_HEX[ev.color] || "#fff") : COLOR_HEX[card[0]];
+  flashFx(FX_WORDS[kind][li()], color, pname(ev.pid));
+}
+function flashFx(text, color, sub){
+  const el = $("fx"); el.classList.remove("go"); void el.offsetWidth;
+  el.style.color = color; el.replaceChildren(document.createTextNode(text), h("br"), sub ? h("small", null, sub) : "");
+  el.classList.add("go");
+}
+let confTimer = null;
+function confetti(big){
+  const cv = $("conf"), ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+  const pal = [...Object.values(COLOR_HEX), "#fff", "#ffc93c"], N = big ? 220 : 130, W = innerWidth, H = innerHeight;
+  const ps = Array.from({length:N}, () => ({x:Math.random() * W, y:-Math.random() * H * (big ? .9 : .6) - 10, vx:(Math.random() - .5) * 90, vy:160 + Math.random() * 260,
+    sw:8 + Math.random() * 26, ph:Math.random() * 6.28, sp:2.5 + Math.random() * 4.5, sz:4.5 + Math.random() * 5, c:pal[(Math.random() * pal.length) | 0]}));
+  const t0 = performance.now(), dur = big ? 8000 : 5500; cancelAnimationFrame(confTimer);
+  (function frame(now){
+    const t = (now - t0) / 1000; ctx.clearRect(0, 0, W, H);
+    if(t * 1000 > dur){ ctx.clearRect(0, 0, W, H); return; }
+    for(const p of ps){
+      const y = p.y + p.vy * t; if(y < -12 || y > H + 12) continue;
+      const x = p.x + p.vx * t + p.sw * Math.sin(p.ph + t * 2.2), rot = p.ph + t * p.sp * .6, fl = .25 + .75 * Math.abs(Math.cos(p.ph + t * p.sp));
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = p.c; ctx.fillRect(-p.sz, -p.sz * .55 * fl, p.sz * 2, p.sz * 1.1 * fl); ctx.restore();
+    }
+    confTimer = requestAnimationFrame(frame);
+  })(performance.now());
+}
+
+/* ---------- cards ---------- */
+function cardEl(card, extra){
+  const el = h("div", {class:"card" + (extra ? " " + extra : "")});
+  const img = new Image(); img.draggable = false; img.alt = "";
+  img.src = "/cards/160/" + (card === "back" ? "back" : card) + ".png";
+  img.onerror = () => { img.remove(); cssCard(el, card); };
+  el.append(img); return el;
+}
+function cssCard(el, card){
+  el.classList.add("css");
+  if(card === "back"){ el.classList.add("back"); el.append(h("div", {class:"in"}, h("span", {class:"v"}, "UNO"))); return; }
+  if(isWild(card)){ el.classList.add("wild"); el.append(h("div", {class:"in"}, h("span", {class:"v"}, card === "wild4" ? "+4" : "★"))); return; }
+  const col = COLOR_HEX[card[0]], v = card.slice(1), label = {skip:"⊘", reverse:"⇄", draw2:"+2"}[v] || v;
+  el.style.setProperty("--c", col);
+  el.append(h("div", {class:"in"}, h("span", {class:"k"}, label), h("span", {class:"v"}, label)));
+}
+const VALUE_ORDER = {"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,skip:10,reverse:11,draw2:12};
+function sortedHand(hand){
+  if(!S.sort) return hand.slice();
+  const ci = {R:0, Y:1, G:2, B:3};
+  return hand.slice().sort((a, b) => {
+    const wa = isWild(a), wb = isWild(b);
+    if(wa !== wb) return wa ? 1 : -1;
+    if(wa) return a < b ? -1 : 1;
+    return ci[a[0]] - ci[b[0]] || (VALUE_ORDER[a.slice(1)] - VALUE_ORDER[b.slice(1)]);
+  });
+}
+
+/* ---------- derived game state ---------- */
+const playing = () => S.snap && S.snap.phase === "playing";
+const myTurn = () => playing() && S.you != null && S.snap.turn === S.you;
+function remaining(win){ return Math.max(0, (win.remaining || 0) - (performance.now() - S.snapAt) / 1000); }
+
+/* ---------- render: master ---------- */
+function renderAll(){
+  applyStaticText();
+  if(S.screen === "lobby") renderLobby();
+  else if(S.screen === "game") renderGame();
+}
+function applyStaticText(){
+  document.documentElement.lang = lang === "zh" ? "zh-Hant" : "en";
+  document.title = t("app_title");
+  $("joinSub").textContent = w("sub"); $("btnJoin").textContent = w("join"); $("btnWatch").textContent = w("watch"); refreshPwaBtn();
+  $("langJoin").textContent = w("menu_lang"); $("lobLang").textContent = w("menu_lang");
+  $("nameInput").placeholder = t("name_label"); $("pwInput").placeholder = w("pw"); $("lobLeave").textContent = t("lobby_leave");
+  $("lobSeatsH").textContent = t("lobby_players"); $("lobRulesH").textContent = t("lobby_rules"); $("lobChatH").textContent = t("chat_title");
+  $("lobChatInput").placeholder = t("chat_placeholder"); $("lobChatSend").textContent = t("chat_send"); $("lobAvatar").textContent = "◉  " + w("my_avatar"); $("lobRename").textContent = "✎  " + w("rename");
+  $("tabChat").textContent = t("chat_title"); $("tabLog").textContent = t("log_title"); $("chatInput").placeholder = t("chat_placeholder"); $("chatSend").textContent = t("chat_send");
+  $("btnSort").textContent = "⇅ " + w("sort");
+}
+
+/* ---------- lobby ---------- */
+function rulesLine(r){
+  if(!r) return "";
+  const bits = [t("rule_classic")];
+  if(r.stack_draw2 || r.stack_wild4) bits.push(t("rule_stacking"));
+  if(r.jump_in || r.seven_swap || r.zero_rotate) bits.push(t("rule_party"));
+  if(r.target_score) bits.push(t("game_target", {n:r.target_score}));
+  return [...new Set(bits)].join(" · ");
+}
+function renderLobby(){
+  const room = S.room || {seats:[], spectators:[], rules:{}};
+  $("lobTitle").textContent = room.name || t("unnamed_room");
+  $("lobSub").textContent = t("lobby_seats", {n:(room.seats || []).length});
+  const sig = JSON.stringify([room.seats, room.rules, S.you, Object.keys(S.av).map(k => S.av[k].v), myAvVer, lang]);
+  setSig("lobby", sig, () => {
+    $("lobSeats").replaceChildren(...(room.seats || []).map(seat => h("div", {class:"seat" + (seat.pid === S.you ? " me" : "")},
+      avatarEl(seat.pid, seat.name, 44), h("div", {class:"nm"}, seat.name + (seat.pid === S.you ? t("you_suffix") : "")),
+      seat.host ? h("span", {class:"tag host"}, w("host")) : null, seat.connected ? null : h("span", {class:"tag off"}, w("offline")))));
+    const r = room.rules || {}, rows = [rulesLine(r)];
+    const on = (v) => v ? "✓" : "✗";
+    rows.push(`${t("rule_stack_draw2")} ${on(r.stack_draw2)} · ${t("rule_stack_wild4")} ${on(r.stack_wild4)} · ${t("rule_jump_in")} ${on(r.jump_in)}`);
+    rows.push(`${t("rule_seven_swap")} ${on(r.seven_swap)} · ${t("rule_zero_rotate")} ${on(r.zero_rotate)} · ${t("rule_start_cards")}: ${r.start_cards}`);
+    $("lobRules").replaceChildren(...rows.map(x => h("div", null, x)));
+  });
+  $("lobWait").textContent = S.you == null ? w("lobby_wait_spec") : t("lobby_wait_host");
+  renderChatInto("lobChatList");
+}
+
+/* ---------- chat / log ---------- */
+function chatRow(m){
+  const me = m.pid === S.you && m.pid != null;
+  return h("div", {class:"msg"}, avatarEl(typeof m.pid === "number" ? m.pid : -1, m.name, 30), h("div", null, h("div", {class:"who" + (me ? " me" : "")}, m.name), h("div", {class:"tx"}, String(m.text || ""))));
+}
+function renderChatInto(id){
+  const box = $(id); if(!box) return;
+  const sig = S.chat.length + ":" + Object.keys(S.av).length + ":" + myAvVer;
+  if(box.dataset.sig === sig) return; box.dataset.sig = sig;
+  box.replaceChildren(...(S.chat.length ? S.chat.map(chatRow) : [h("div", {class:"muted", style:"padding:8px 0"}, t("chat_empty"))]));
+  box.scrollTop = box.scrollHeight;
+}
+function renderChats(){ renderChatInto("paneChat"); renderChatInto("lobChatList"); }
+function onChat(m){
+  renderChats();
+  if(S.screen === "game" && !sideOpen() && m.pid !== S.you){ S.unread++; updateDot(); }
+}
+function sideOpen(){ return $("side").classList.contains("open") || innerWidth >= 980; }
+function updateDot(){ const d = $("chatDot"); d.style.display = S.unread ? "flex" : "none"; d.textContent = S.unread > 9 ? "9+" : S.unread; }
+function renderLog(){
+  const box = $("paneLog"), lines = S.log.map(eventLine).filter(Boolean);
+  box.replaceChildren(...(lines.length ? lines.map(x => h("div", {class:"logline"}, x)) : [h("div", {class:"muted"}, t("log_empty"))]));
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- game ---------- */
+function renderGame(){
+  const sn = S.snap; if(!sn) return;
+  // header
+  $("rnd").textContent = t("game_round_no", {n:sn.round_no});
+  $("tgt").textContent = sn.rules && sn.rules.target_score ? t("game_target", {n:sn.rules.target_score}) : "";
+  const ban = $("banner"); let btxt = "", you = false;
+  if(sn.phase === "playing"){
+    if(S.you == null) btxt = t("game_spectating");
+    else if(sn.turn === S.you){ btxt = t("game_turn_you"); you = true; }
+    else btxt = t("game_turn_wait", {name:pname(sn.turn)});
+  } else btxt = sn.phase === "match_over" ? t("lobby_status_match") : t("lobby_status_round");
+  ban.textContent = btxt; ban.classList.toggle("you", you);
+  renderOpps(); renderCenter(); renderActions(); renderHand(); renderOverlayFor(sn); renderHint(); renderChatInto("paneChat");
+  if(!S.logRendered){ S.logRendered = true; renderLog(); }
+}
+function avSig(){ return Object.keys(S.av).map(k => k + S.av[k].v).join(",") + myAvVer; }
+function renderOpps(){
+  const sn = S.snap, opps = sn.players.filter(p => p.pid !== S.you), rev = sn.revealed || {};
+  const sig = JSON.stringify([opps.map(p => [p.pid, p.name, p.count, p.said_uno, p.connected]), sn.turn, sn.phase, sn.uno_window && [sn.uno_window.pid, sn.uno_window.said], Object.keys(rev).length && rev, avSig()]);
+  setSig("opps", sig, () => {
+    $("opps").replaceChildren(...opps.map(p => {
+      const turn = sn.phase === "playing" && sn.turn === p.pid;
+      const box = h("div", {class:"opp" + (turn ? " turn" : "") + (p.connected === false ? " off" : ""), "data-pid":p.pid});
+      box.style.setProperty("--c", seatColor(p.pid));
+      if(p.said_uno) box.append(h("span", {class:"unotag"}, "UNO!"));
+      box.append(avatarEl(p.pid, p.name, 0), h("span", {class:"cnt" + (p.count && p.count <= 2 ? " low" : "")}, p.count), h("div", {class:"nm"}, p.name));
+      const hand = rev[p.pid] || rev[String(p.pid)];
+      if(hand && hand.length){
+        const rv = h("div", {class:"reveal"}); for(const c of hand.slice(0, 14)) rv.append(cardEl(c)); box.append(rv);
+      } else {
+        const fan = h("div", {class:"fan"}); for(let i = 0; i < Math.min(p.count, 4); i++) fan.append(h("div", {class:"mini"})); box.append(fan);
+      }
+      if(sn.uno_window && sn.uno_window.pid === p.pid && !sn.uno_window.said) box.append(h("div", {class:"unochip", "data-uno":"1"}, "UNO"));
+      return box;
+    }));
+  });
+}
+function renderCenter(){
+  const sn = S.snap, can = myTurn() && !sn.drawn && !sn.chooser;
+  const sig = JSON.stringify([sn.top_cards, sn.current_color, sn.direction, sn.draw_count, sn.pending, can, lang]);
+  setSig("center", sig, () => {
+    const draw = h("div", {class:"drawpile" + (can ? " can" : ""), onclick:() => doDraw()}, cardEl("back"));
+    const stack = h("div", {class:"stack"});
+    const tops = (sn.top_cards && sn.top_cards.length ? sn.top_cards : [sn.top]).slice(-3);
+    tops.forEach((c, i) => { const el = cardEl(c); const k = tops.length - 1 - i; el.style.transform = k ? `rotate(${(i % 2 ? 1 : -1) * (4 + k * 3)}deg) translate(${(i % 2 ? 1 : -1) * k * 3}px,0)` : "none"; stack.append(el); });
+    const topNow = tops[tops.length - 1], topN = (sn.top_cards || []).length;
+    if(S.prevTop != null && (S.prevTop !== topNow || S.prevTopN !== topN) && stack.lastChild){
+      stack.lastChild.classList.add("land");
+      stack.lastChild.style.setProperty("--d", Math.max(0, (S.flyUntil - performance.now()) / 1000 - 0.04) + "s");
+    }
+    S.prevTop = topNow; S.prevTopN = topN;
+    const chip = h("div", {class:"colorchip"}, colorText(sn.current_color)); chip.style.background = COLOR_HEX[sn.current_color] || "#888";
+    const ccw = sn.direction === -1;
+    const dir = h("div", {class:"dir" + (ccw ? " ccw" : "")}, h("b", null, "↻"), h("span", null, ccw ? t("game_direction_ccw") : t("game_direction_cw")));
+    const kids = [dir, h("div", {class:"piles"},
+      h("div", {class:"pilebox"}, draw, h("div", {class:"lbl"}, t("game_pile", {n:sn.draw_count}))),
+      h("div", {class:"pilebox"}, stack, chip))];
+    if(sn.pending > 0) kids.push(h("div", {class:"pending"}, w("pending_label", {n:sn.pending})));
+    $("center").replaceChildren(...kids);
+  });
+}
+function renderActions(){
+  const sn = S.snap, win = sn.uno_window, me = S.you;
+  const canDraw = myTurn() && !sn.drawn && !sn.chooser, canPass = myTurn() && sn.drawn != null && !sn.chooser;
+  const canUno = !!(win && me != null && win.pid === me && !win.said), canCatch = !!(win && me != null && win.pid !== me && !win.said);
+  const sig = JSON.stringify([canDraw, canPass, canUno, canCatch, S.you == null, lang]);
+  setSig("actions", sig, () => {
+    if(S.you == null){ $("actions").replaceChildren(); return; }
+    const mk = (cls, label, key, on, fn) => h("button", {class:"btn " + cls, disabled:!on, onclick:fn}, label, h("span", {class:"key"}, key));
+    $("actions").replaceChildren(mk("catch", t("game_btn_catch"), "C", canCatch, () => send({t:"catch"})), mk("uno", t("game_btn_uno"), "U", canUno, () => send({t:"uno"})),
+      mk("", t("game_btn_pass"), "P", canPass, () => send({t:"pass"})), mk("primary", sn.pending > 0 ? t("game_draw_n", {n:sn.pending}) : t("game_btn_draw"), "D", canDraw, doDraw));
+  });
+}
+function doDraw(){ if(S.you == null) return; if(!myTurn()) return toast(errText("not_your_turn")); send({t:"draw"}); }
+function comboCards(){
+  const sn = S.snap; if(!sn || S.you == null || S.sel === null || !myTurn() || !sn.combo) return null;
+  const card = sortedHand(sn.hand || [])[S.sel];
+  return (card && sn.combo[card]) || null;
+}
+function updateComboBtn(){
+  const b = $("btnCombo"), order = comboCards();
+  if(!order){ b.style.display = "none"; return; }
+  b.textContent = "▶ " + w("combo_btn", {n:order.length}); b.style.display = "";
+}
+function renderHand(){
+  const sn = S.snap, spectator = S.you == null;
+  updateComboBtn();
+  $("handTitle").textContent = spectator ? t("game_spectating") : t("game_hand", {n:(sn.hand || []).length});
+  $("btnSort").style.display = spectator ? "none" : "";
+  const hand = sortedHand(sn.hand || []);
+  const sig = JSON.stringify([hand, sn.legal, sn.jumpable, sn.turn, sn.phase, sn.drawn, S.sel, S.sort, !!sn.chooser]);
+  setSig("hand", sig, () => {
+    const box = $("hand"), keep = box.scrollLeft;
+    if(spectator){ box.replaceChildren(h("div", {class:"spectate"}, t("game_spectator_hint"))); return; }
+    const my = myTurn(), legal = new Set(sn.legal || []), jump = new Set(sn.jumpable || []);
+    const seen = {}; S.prevHand.forEach(c => { seen[c] = (seen[c] || 0) + 1; });
+    const baseDelay = Math.max(0, S.flyHandUntil - performance.now() - 380);
+    let fresh = 0;
+    const els = hand.map((card, i) => {
+      const isLegal = my && legal.has(card), isJump = !my && playing() && jump.has(card);
+      const isNew = !(seen[card] > 0); if(!isNew) seen[card]--;
+      const el = h("div", {class:"hc" + (isLegal ? " play" : "") + (isJump ? " jump" : "") + (my && !isLegal && playing() ? " dim" : "") + (S.sel === i ? " sel" : "") + (sn.drawn === card && my ? " drawn" : "") + (isNew ? " enter" : "")});
+      if(isNew){ el.style.animationDelay = (baseDelay + 380 * (S.flyHandUntil > performance.now() ? 1 : 0) + (fresh++) * 70) + "ms"; }
+      el.append(cardEl(card));
+      el.addEventListener("click", () => onCardTap(card, i, isLegal, isJump));
+      attachDrag(el, card);
+      return el;
+    });
+    S.prevHand = hand.slice();
+    box.replaceChildren(...els); box.scrollLeft = keep;
+    fitHand();
+  });
+}
+/* squeeze the overlap so the whole hand fits the screen; only scroll when the cards would become unreadable */
+function fitHand(){
+  const box = $("hand"), cards = box.querySelectorAll(".hc");
+  if(!cards.length) return;
+  const n = cards.length, cw = cards[0].offsetWidth;
+  if(!cw || n < 2){ box.style.removeProperty("--ov"); return; }
+  const avail = box.clientWidth - 32;                              /* the box has 16px padding on each side */
+  const step = Math.max(cw * 0.22, Math.min(cw * 0.58, (avail - cw) / (n - 1)));
+  box.style.setProperty("--ov", -(cw - step).toFixed(1) + "px");
+}
+addEventListener("resize", () => { try{ fitHand(); }catch(e){} });
+addEventListener("orientationchange", () => setTimeout(() => { try{ fitHand(); }catch(e){} }, 250));
+function onCardTap(card, i, isLegal, isJump){
+  if(performance.now() - S.dragEnd < 450) return;
+  const sn = S.snap; if(!playing()) return;
+  if(sn.chooser) return toast(errText("pick_swap"));
+  const cmb = !!(sn.combo && sn.combo[card] && myTurn());           /* a same-number combo is possible */
+  if(!isLegal && !isJump && !cmb) { S.sel = null; invalidate(); renderHand(); return toast(errText(myTurn() ? "illegal" : "not_your_turn")); }
+  if((coarse || cmb) && S.sel !== i){ S.sel = i; invalidate(); renderHand(); return; }
+  if(!isLegal && !isJump) { S.sel = null; invalidate(); renderHand(); return toast(errText("illegal")); }
+  S.sel = null; invalidate();
+  playCard(card, isJump && !isLegal);
+}
+function playCard(card, jump){
+  if(jump) return send({t:"play", card, jump:true});
+  if(isWild(card)) return openColorPicker(card);
+  send({t:"play", card});
+}
+function openColorPicker(card){
+  const mk = (c) => { const b = h("button", {onclick:() => { closeOverlay(); send({t:"play", card, color:c}); }}, colorText(c)); b.style.background = COLOR_HEX[c]; return b; };
+  openOverlay(h("div", {class:"dialog"}, h("h2", null, t("game_color_prompt")), h("div", {class:"colors"}, ...["R","Y","G","B"].map(mk)), h("button", {class:"btn ghost", onclick:closeOverlay}, t("cancel"))), true);
+}
+function renderHint(){
+  const sn = S.snap, el = $("hint"); if(!sn) return;
+  let txt = "", hot = false;
+  const win = sn.uno_window, me = S.you;
+  if(S.dragHint){ txt = t({release:"game_drag_release", jump:"game_drag_jump", illegal:"game_drag_illegal"}[S.dragHint]); hot = S.dragHint !== "illegal"; }
+  else if(sn.phase !== "playing") txt = "";
+  else if(me == null) txt = t("game_spectator_hint");
+  else if(sn.chooser && sn.chooser.pid !== me) txt = t("game_choosing", {name:pname(sn.chooser.pid)});
+  else if(win && win.pid === me && !win.said){ txt = t("game_uno_press", {s:remaining(win).toFixed(1)}); hot = true; }
+  else if(win && win.pid !== me && !win.said){ txt = t("game_uno_catch", {s:remaining(win).toFixed(1)}); hot = true; }
+  else if(myTurn() && sn.drawn) { txt = t("game_drawn_hint", {card:cardText(sn.drawn)}).replace(/—.*$/, "") + " — " + (coarse ? w("tap_play") : w("tap_play_mouse")); hot = true; }
+  else if(myTurn() && sn.pending > 0){ txt = t("game_pending", {n:sn.pending}); hot = true; }
+  else if(myTurn()){ txt = coarse ? w("tap_play") : w("tap_play_mouse"); hot = true; }
+  else txt = t("game_not_your_turn");
+  if(el.textContent !== txt) el.textContent = txt; el.classList.toggle("hot", hot);
+  // live UNO countdown on the chip
+  if(win){ const chip = document.querySelector("[data-uno]"); if(chip) chip.textContent = "UNO " + remaining(win).toFixed(1); }
+}
+function renderTimer(){
+  const sn = S.snap, bar = $("tbar"); if(!sn) return;
+  const on = !!(sn.rules && sn.rules.turn_time > 0 && sn.phase === "playing");
+  const disp = on ? "flex" : "none"; if(bar.style.display !== disp) bar.style.display = disp;
+  if(!on) return;
+  const tt = sn.turn_timer, total = (tt && tt.total) || sn.rules.turn_time || 1;
+  const left = tt ? Math.max(0, (tt.remaining || 0) - (performance.now() - S.snapAt) / 1000) : total, frac = Math.min(1, left / total);
+  const col = left <= 5 ? "var(--red)" : frac < .4 ? "var(--accent)" : "var(--green)";
+  const f = $("tfill"), n = $("tnum");
+  f.style.width = (frac * 100).toFixed(1) + "%"; f.style.background = col; n.style.color = col;
+  const txt = String(Math.ceil(left)); if(n.textContent !== txt) n.textContent = txt;
+}
+setInterval(() => { if(S.screen === "game" && S.snap){ renderHint(); renderTimer(); } }, 120);
+
+/* ---------- drag to play + flying cards ---------- */
+function canPlayNow(card){
+  const sn = S.snap; if(!playing() || !sn || sn.chooser || S.you == null) return false;
+  return myTurn() ? (sn.legal || []).includes(card) : (sn.jumpable || []).includes(card);
+}
+function dropKind(card){ return !canPlayNow(card) ? "illegal" : (myTurn() ? "release" : "jump"); }
+function attachDrag(el, card){
+  el.addEventListener("pointerdown", (e) => {
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    if(!playing() || S.you == null) return;
+    const rect = el.getBoundingClientRect(), sx = e.clientX, sy = e.clientY, id = e.pointerId;
+    const hw = $("hand").parentElement;
+    let ghost = null;
+    const over = (ev) => ev.clientY < hw.getBoundingClientRect().top - 14;
+    const cleanup = () => {
+      removeEventListener("pointermove", onMove); removeEventListener("pointerup", onUp); removeEventListener("pointercancel", onCancel);
+      $("tableEl").classList.remove("drop"); if(S.dragHint){ S.dragHint = ""; renderHint(); }
+    };
+    function onMove(ev){
+      if(ev.pointerId !== id) return;
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if(!ghost){
+        const start = ev.pointerType === "mouse" ? Math.hypot(dx, dy) > 6 : (dy < -10 && Math.abs(dy) > Math.abs(dx) * .8);
+        if(!start) return;
+        ghost = cardEl(card, "dragghost"); ghost.style.width = rect.width + "px"; document.body.append(ghost);
+        el.style.opacity = ".25"; if(S.sel !== null) S.sel = null;
+      }
+      ghost.style.left = (ev.clientX - rect.width / 2) + "px"; ghost.style.top = (ev.clientY - rect.width * .9) + "px";
+      const o = over(ev); $("tableEl").classList.toggle("drop", o);
+      const kind = o ? dropKind(card) : ""; if(kind !== S.dragHint){ S.dragHint = kind; renderHint(); }
+      if(ev.cancelable) ev.preventDefault();
+    }
+    function onUp(ev){
+      if(ev.pointerId !== id) return; cleanup();
+      if(!ghost) return;                       // a plain tap: the click handler deals with it
+      S.dragEnd = performance.now();
+      const gr = ghost.getBoundingClientRect(), dropped = over(ev);
+      if(dropped && canPlayNow(card)){
+        S.lastPlay = {card, rect:gr, at:performance.now()}; ghost.remove(); el.style.opacity = "";
+        playCard(card, !(myTurn() && (S.snap.legal || []).includes(card)));
+      } else {
+        if(dropped) toast(errText(myTurn() ? "illegal" : "not_your_turn"));
+        const g = ghost; g.style.transform = "none";
+        g.animate([{transform:"rotate(-4deg) scale(1.06)"}, {transform:`translate(${rect.left - gr.left}px,${rect.top - gr.top}px)`}], {duration:200, easing:"ease-out"})
+          .onfinish = () => { g.remove(); el.style.opacity = ""; };
+      }
+    }
+    function onCancel(ev){ if(ev.pointerId !== id) return; cleanup(); if(ghost){ ghost.remove(); el.style.opacity = ""; } }
+    addEventListener("pointermove", onMove, {passive:false}); addEventListener("pointerup", onUp); addEventListener("pointercancel", onCancel);
+  });
+}
+function rectOfPid(pid){
+  if(pid === S.you){ const r = $("hand").getBoundingClientRect(); return {left:r.left + r.width / 2 - 20, top:r.top + 20, width:40, height:60}; }
+  const a = document.querySelector('.opp[data-pid="' + pid + '"] .av'); return a ? a.getBoundingClientRect() : null;
+}
+function flyCard(card, from, to, o){
+  o = o || {};
+  const probe = document.querySelector(".stack .card"), w = probe ? probe.getBoundingClientRect().width : 80;
+  const el = cardEl(card, "fly"); el.style.width = w + "px"; document.body.append(el);
+  const cx = (r) => r.left + r.width / 2, cy = (r) => r.top + r.height / 2;
+  const s0 = from.width && from.width < w * .92 ? from.width / w : 1;
+  const kf = [{transform:`translate(${cx(from) - w / 2}px,${cy(from) - w * .75}px) scale(${s0}) rotate(${o.rot || -10}deg)`, opacity:1},
+              {transform:`translate(${cx(to) - w / 2}px,${cy(to) - w * .75}px) scale(${o.scaleEnd || 1}) rotate(0deg)`, opacity:o.fade ? .15 : 1}];
+  el.animate(kf, {duration:o.dur || 420, easing:"cubic-bezier(.2,.8,.2,1)", fill:"forwards"}).onfinish = () => el.remove();
+}
+function animatePlay(ev){
+  const stack = document.querySelector(".stack"); if(!stack || !ev.card) return;
+  const mine = ev.pid === S.you && S.lastPlay && S.lastPlay.card === ev.card && performance.now() - S.lastPlay.at < 4000;
+  const from = mine ? S.lastPlay.rect : rectOfPid(ev.pid); if(!from) return;
+  flyCard(ev.card, from, stack.getBoundingClientRect(), {dur:420});
+  S.flyUntil = performance.now() + 420;
+}
+function animateDraw(ev){
+  if(ev.reason === "start") return;
+  const pile = document.querySelector(".drawpile"), to = rectOfPid(ev.pid); if(!pile || !to) return;
+  const from = pile.getBoundingClientRect(), n = Math.min(ev.n || 1, 4);
+  for(let k = 0; k < n; k++) setTimeout(() => flyCard("back", from, to, {dur:380, scaleEnd:ev.pid === S.you ? .9 : .4, fade:ev.pid !== S.you, rot:6}), k * 110);
+  if(ev.pid === S.you) S.flyHandUntil = performance.now() + 380 + (n - 1) * 110;
+}
+
+/* ---------- overlays ---------- */
+function openOverlay(node, dismissable){
+  const o = $("overlay"); o.replaceChildren(node); o.classList.add("on"); o.dataset.dismiss = dismissable ? "1" : "";
+}
+function closeOverlay(){ const o = $("overlay"); o.classList.remove("on"); o.replaceChildren(); o.dataset.kind = ""; }
+$("overlay").addEventListener("click", (e) => { if(e.target.id === "overlay" && $("overlay").dataset.dismiss) closeOverlay(); });
+function renderOverlayFor(sn){
+  const o = $("overlay");
+  // swap target picker (7 rule)
+  if(sn.phase === "playing" && sn.chooser && sn.chooser.pid === S.you){
+    const sig = "swap" + JSON.stringify(sn.players.map(p => [p.pid, p.count])); if(o.dataset.kind === sig) return; o.dataset.kind = sig;
+    const picks = sn.players.filter(p => p.pid !== S.you).map(p => h("button", {class:"pick", onclick:() => { closeOverlay(); send({t:"swap", target:p.pid}); }},
+      avatarEl(p.pid, p.name, 36), p.name, h("span", {class:"c"}, t("game_cards_n", {n:p.count}))));
+    openOverlay(h("div", {class:"dialog"}, h("h2", null, t("game_swap_prompt")), h("div", {class:"picks"}, ...picks)));
+    return;
+  }
+  if(sn.phase === "round_over" || sn.phase === "match_over"){
+    const sig = "end" + sn.phase + sn.round_no + JSON.stringify(sn.players.map(p => [p.pid, p.score, p.wins])) + lang + avSig();
+    if(o.dataset.kind === sig) return; o.dataset.kind = sig;
+    const match = sn.phase === "match_over", winner = match ? sn.match_winner : sn.round_winner;
+    const rows = sn.players.slice().sort((a, b) => b.score - a.score).map(p => {
+      const rpts = (sn.round_points || {})[p.pid] != null ? (sn.round_points || {})[p.pid] : ((sn.round_points || {})[String(p.pid)] || 0);
+      const win = p.pid === winner, delta = win ? "+" + (p.round_score || 0) : (rpts ? "-" + rpts : "0");
+      return h("tr", null, h("td", null, h("div", {class:"pl"}, avatarEl(p.pid, p.name, 26), p.name + (p.pid === S.you ? t("you_suffix") : ""))),
+        h("td", null, p.score), h("td", {class:win ? "pos" : (rpts ? "neg" : "")}, delta), h("td", null, p.wins ? "★" + p.wins : ""));
+    });
+    const tbl = h("table", {class:"scores"}, h("tr", null, h("th", null, ""), h("th", null, t("game_score_short")), h("th", null, t("game_round_points")), h("th", null, t("game_wins"))), ...rows);
+    openOverlay(h("div", {class:"dialog"}, h("h2", {class:"gold"}, match ? t("game_match_over") : t("game_round_over", {n:sn.round_no})),
+      h("div", {class:"sub2"}, match ? t("game_match_winner", {name:pname(winner)}) : t("game_round_winner", {name:pname(winner)})), tbl,
+      h("div", {class:"waitline"}, match ? t("game_wait_rematch") : t("game_wait_next_round"))));
+    return;
+  }
+  if(o.dataset.kind && (o.dataset.kind.startsWith("swap") || o.dataset.kind.startsWith("end"))) closeOverlay();
+}
+
+/* ---------- side panel & menu ---------- */
+function setSide(open){ $("side").classList.toggle("open", open); if(open){ S.unread = 0; updateDot(); const p = $("paneChat"); p.scrollTop = p.scrollHeight; } }
+function setTab(which){
+  $("tabChat").classList.toggle("on", which === "chat"); $("tabLog").classList.toggle("on", which === "log");
+  $("paneChat").classList.toggle("on", which === "chat"); $("paneLog").classList.toggle("on", which === "log");
+  $("chatbar").classList.toggle("on", which === "chat"); if(which === "log") renderLog();
+}
+function openRename(){
+  const inp = h("input", {value:S.name || store.get("name", ""), maxlength:"16", autocomplete:"off", spellcheck:"false",
+    style:"background:var(--panel2);border:2px solid var(--green);border-radius:12px;padding:12px;font-size:17px;outline:none;width:100%"});
+  const ok = () => {
+    const v = inp.value.trim().slice(0, 16);
+    if(v){ send({t:"name", name:v}); store.set("name", v); S.name = v; $("nameInput").value = v; }
+    closeOverlay();
+  };
+  inp.addEventListener("keydown", (e) => { if(e.key === "Enter") ok(); });
+  openOverlay(h("div", {class:"dialog"}, h("h2", null, w("rename")), inp,
+    h("div", {class:"row", style:"justify-content:center"}, h("button", {class:"btn primary", onclick:ok}, w("done")), h("button", {class:"btn", onclick:closeOverlay}, t("cancel")))), true);
+  setTimeout(() => { inp.focus(); inp.select(); }, 60);
+}
+/* ---------- add to home screen ---------- */
+function isStandalone(){
+  return !!(navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches));
+}
+function guessPlatform(){
+  const ua = navigator.userAgent || "";
+  if(/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+  if(/Android/.test(ua)) return "android";
+  return "other";
+}
+function openPwaHelp(){
+  let which = guessPlatform();
+  const body = h("div", {style:"display:flex;flex-direction:column;gap:14px"});
+  const draw = () => {
+    const keys = {ios:["pwa_ios1","pwa_ios2","pwa_ios3"], android:["pwa_and1","pwa_and2","pwa_and3"], other:["pwa_oth1","pwa_oth2"]}[which];
+    const tabs = h("div", {class:"pwa-tabs"}, ["ios","android","other"].map(k =>
+      h("button", {class:"btn" + (k === which ? " on" : ""), onclick:() => { which = k; draw(); }}, w("pwa_tab_" + (k === "ios" ? "ios" : k === "android" ? "android" : "other")))));
+    const list = h("ol", {class:"pwa-steps"}, keys.map(k => { const li = h("li"); li.innerHTML = w(k); return li; }));
+    body.replaceChildren(tabs, list, h("div", {class:"pwa-note"}, w("pwa_note")));
+  };
+  draw();
+  openOverlay(h("div", {class:"dialog"}, h("h2", null, w("pwa_title")), isStandalone() ? h("div", {class:"pwa-note"}, w("pwa_done")) : null,
+    body, h("button", {class:"btn ghost", onclick:closeOverlay}, t("close"))), true);
+}
+function refreshPwaBtn(){
+  const b = $("btnPwa"); if(!b) return;
+  b.textContent = w("pwa_btn");
+  b.style.display = isStandalone() || guessPlatform() === "other" ? "none" : "";     /* only worth showing on phones/tablets */
+}
+function openMenu(){
+  openOverlay(h("div", {class:"dialog"}, h("button", {class:"btn", onclick:() => { setLang(lang === "zh" ? "en" : "zh"); closeOverlay(); }}, w("menu_lang")),
+    S.you != null ? h("button", {class:"btn", onclick:() => { closeOverlay(); openRename(); }}, "✎  " + w("rename")) : null,
+    S.you != null ? h("button", {class:"btn", onclick:() => { closeOverlay(); openAvatarDialog(); }}, "◉  " + w("menu_avatar")) : null,
+    isStandalone() || guessPlatform() === "other" ? null : h("button", {class:"btn", onclick:() => { closeOverlay(); openPwaHelp(); }}, w("pwa_btn")),
+    h("button", {class:"btn warn", onclick:() => { closeOverlay(); leave(); }}, t("game_btn_leave")), h("button", {class:"btn ghost", onclick:closeOverlay}, t("close"))), true);
+}
+function setLang(l){ lang = l; store.set("lang", l); invalidate(); S.logRendered = false; $("overlay").dataset.kind = ""; refreshJoinAv(); renderAll(); renderLog(); loadInfo(); }
+/* ---------- emoji reactions ---------- */
+const REACTIONS = ["👍","😂","😮","😡","😭","🎉","🤔","👏"];
+const SPECIAL_REACTIONS = ["👑","🔥","😎","🏆"];          // only whoever leads the match score
+function closeReactPop(){ $("reactPop").classList.remove("on"); }
+function iAmLeader(){            /* same rule as the host: top match score, above zero */
+  const ps = (S.snap && S.snap.players) || [], top = Math.max(0, ...ps.map(p => p.score || 0));
+  const me = ps.find(p => p.pid === S.you);
+  return top > 0 && !!me && (me.score || 0) === top;
+}
+function toggleReactPop(ev){
+  if(ev) ev.stopPropagation();
+  const pop = $("reactPop");
+  if(pop.classList.contains("on")){ closeReactPop(); return; }
+  if(S.you == null){ toast(w("react_spectator")); return; }
+  const lead = iAmLeader();
+  const mk = (e, locked) => {
+    const b = h("button", {type:"button", class:locked ? "locked" : ""}, e);
+    b.addEventListener("click", (x) => {
+      x.stopPropagation();
+      if(locked){ b.classList.remove("nope"); void b.offsetWidth; b.classList.add("nope"); toast(errText("react_locked")); return; }   /* the palette stays open */
+      closeReactPop(); send({t:"react", emoji:e}); if(navigator.vibrate) try{ navigator.vibrate(15); }catch(err){}
+    });
+    return b;
+  };
+  pop.replaceChildren(
+    h("div", {class:"rr"}, REACTIONS.map(e => mk(e, false))),
+    h("div", {class:"rr"}, SPECIAL_REACTIONS.map(e => mk(e, !lead))),
+    h("div", {class:"lead" + (lead ? " me" : "")}, w(lead ? "react_leader_you" : "react_leader_only")));
+  pop.style.maxHeight = ""; pop.classList.add("on");
+  const r = $("btnReact").getBoundingClientRect(), pw = pop.offsetWidth;
+  const top = Math.round(r.bottom + 8);
+  pop.style.top = top + "px";
+  pop.style.maxHeight = Math.max(120, innerHeight - top - 8) + "px";      /* never run off the bottom of the screen */
+  pop.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.right - pw)) + "px";
+}
+function floatReact(m){
+  const special = SPECIAL_REACTIONS.includes(m.emoji);
+  if((!special && !REACTIONS.includes(m.emoji)) || S.screen !== "game") return;
+  const rc = rectOfPid(m.pid); if(!rc) return;
+  const el = h("div", {class:"floatreact" + (special ? " big" : "")}, m.emoji);
+  /* beside the avatar (not over it), and never above the top of the page */
+  const mine = m.pid === S.you;
+  const x = Math.min(innerWidth - 30, mine ? rc.left + rc.width / 2 : rc.left + rc.width + 22 + (Math.random() - .5) * 10);
+  const y = Math.max(60, rc.top + rc.height / 2);
+  el.style.left = x + "px"; el.style.top = y + "px"; document.body.append(el);
+  const rise = Math.min(60, Math.max(24, y - 50)), dx = (Math.random() - .5) * 16;
+  const anim = el.animate([
+    {transform:"translate(-50%,-50%) scale(.3)", opacity:0},
+    {transform:"translate(-50%,-58%) scale(1.25)", opacity:1, offset:.14},
+    {transform:"translate(-50%,-62%) scale(1)", opacity:1, offset:.28},
+    {transform:`translate(calc(-50% + ${dx}px),calc(-50% - ${rise}px)) scale(1)`, opacity:1, offset:.78},
+    {transform:`translate(calc(-50% + ${dx}px),calc(-50% - ${rise + 14}px)) scale(.85)`, opacity:0}
+  ], {duration:2600, easing:"ease-out"});
+  anim.onfinish = () => el.remove();
+  setTimeout(() => el.remove(), 3200);
+}
+
+function sendChat(inputId){
+  const inp = $(inputId), text = inp.value.trim(); if(!text) return; send({t:"chat", text:text.slice(0, 300)}); inp.value = "";
+}
+
+/* ---------- join screen ---------- */
+async function loadInfo(){
+  const box = $("roomInfo");
+  try{
+    const r = await fetch("/api/info", {cache:"no-store"}); const d = await r.json();
+    const busy = d.state && d.state !== "lobby";
+    S.info = d; $("pwField").style.display = d.locked ? "flex" : "none";
+    const tags = [d.locked ? w("locked") : "", d.approval ? w("approval") : ""].filter(Boolean).join("  ");
+    box.replaceChildren(h("div", null, h("b", null, d.name || t("unnamed_room"))), h("div", null, (busy ? w("room_busy") : w("room_wait")) + " · " + w("room_players", {n:d.players || 0, c:d.capacity || 10})), tags ? h("div", null, tags) : "");
+    $("btnJoin").disabled = false; $("btnWatch").disabled = false;
+  }catch(e){ box.textContent = w("room_none"); }
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  try{ I18N = await (await fetch("/api/i18n")).json(); }catch(e){}
+  $("nameInput").value = store.get("name", "") || t("name_default");
+  applyStaticText(); refreshJoinAv(); loadInfo();
+  $("nameInput").addEventListener("input", refreshJoinAv);
+  $("joinAv").addEventListener("click", openAvatarDialog);
+  $("btnJoin").addEventListener("click", () => joinRoom(false));
+  $("btnWatch").addEventListener("click", () => joinRoom(true));
+  $("nameInput").addEventListener("keydown", (e) => { if(e.key === "Enter") joinRoom(false); });
+  $("pwInput").addEventListener("keydown", (e) => { if(e.key === "Enter") joinRoom(false); });
+  for(const id of ["langJoin","lobLang"]) $(id).addEventListener("click", () => setLang(lang === "zh" ? "en" : "zh"));
+  $("lobLeave").addEventListener("click", leave); $("lobAvatar").addEventListener("click", openAvatarDialog); $("lobRename").addEventListener("click", openRename);
+  $("btnPwa").addEventListener("click", openPwaHelp);
+  $("btnReact").addEventListener("click", toggleReactPop); document.addEventListener("click", closeReactPop); addEventListener("resize", closeReactPop);
+  $("btnMenu").addEventListener("click", openMenu); $("btnChat").addEventListener("click", () => setSide(true)); $("closeSide").addEventListener("click", () => setSide(false));
+  $("tabChat").addEventListener("click", () => setTab("chat")); $("tabLog").addEventListener("click", () => setTab("log"));
+  $("btnCombo").addEventListener("click", (ev) => {
+    ev.stopPropagation(); const order = comboCards(); if(!order) return;
+    S.sel = null; invalidate(); send({t:"combo", cards:order}); renderHand();
+  });
+  $("btnSort").addEventListener("click", () => { S.sort = !S.sort; store.set("sort", S.sort ? "1" : "0"); S.sel = null; invalidate(); renderHand(); });
+  $("chatSend").addEventListener("click", () => sendChat("chatInput")); $("lobChatSend").addEventListener("click", () => sendChat("lobChatInput"));
+  $("chatInput").addEventListener("keydown", (e) => { if(e.key === "Enter") sendChat("chatInput"); });
+  $("lobChatInput").addEventListener("keydown", (e) => { if(e.key === "Enter") sendChat("lobChatInput"); });
+  $("closedBtn").addEventListener("click", () => { $("closedScreen").classList.remove("on"); leaveLocal(); });
+  document.addEventListener("click", (e) => { if(S.screen === "game" && S.sel !== null && !e.target.closest(".hc")){ S.sel = null; invalidate(); renderHand(); } });
+  document.addEventListener("keydown", (e) => {
+    if(S.screen !== "game" || /INPUT|TEXTAREA/.test((e.target.tagName || ""))) return;
+    const k = e.key.toLowerCase(); if(k === "d") doDraw(); else if(k === "p") send({t:"pass"}); else if(k === "u") send({t:"uno"}); else if(k === "c") send({t:"catch"});
+  });
+  addEventListener("resize", () => { invalidate(); renderAll(); });
+  document.addEventListener("visibilitychange", () => { if(!document.hidden && S.joined && S.es && S.es.readyState === 2) rejoin(); });
+  // come back to the same seat after a reload
+  if(store.get("active") === "1" && store.get("token")){ S.token = store.get("token"); const ok = await joinRoom(store.get("spectate") === "1", true); if(!ok){ store.del("active"); } }
+}
+boot();
+</script>
+</body>
+</html>

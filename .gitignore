@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# runtime noise (the freeze log lives next to the prefs file)
+*.log
+hang.log
