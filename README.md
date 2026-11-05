@@ -4,7 +4,7 @@ Classic UNO for **2–10 players** on the same Wi-Fi. Python 3.10+,
 Tkinter, **standard library only** — no server, no account, no internet,
 no bots: every seat is a real person.
 
-![players](https://img.shields.io/badge/players-2--10-f0503c) ![deps](https://img.shields.io/badge/dependencies-none-4ec9a0) ![lang](https://img.shields.io/badge/UI-中文%20%2F%20English-ffc93c)
+![players](https://img.shields.io/badge/players-2--10-f0503c) ![deps](https://img.shields.io/badge/dependencies-none-4ec9a0) ![lang](https://img.shields.io/badge/UI-中文%20%2F%20English-ffc93c) ![tests](https://github.com/kyle2241345145351324321/uno/actions/workflows/tests.yml/badge.svg)
 
 ![Game table](docs/screenshots/game.png)
 
